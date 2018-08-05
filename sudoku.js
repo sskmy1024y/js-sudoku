@@ -1,6 +1,6 @@
-//問題ファイルの情報
+//問題ファイルの情報
 var Q = {
-  board: [],  //問題の多元配列
+  board: [],  //問題ファイルの多元配列化
 
   area: 0,  //全セル数
 
@@ -11,13 +11,15 @@ var Q = {
   blks: 0,  //分割ブロック数 (9x9の時は9)
 };
 
+
 //設定関連の変数
 var opt = {
   isLoaded: false,  //問題ファイルをロード済みかのフラグ
-  changeView: false, //表示オプション。変更推移を表示するかどうか
+  changeView: false,  //表示オプション。変更推移を表示するかどうか
 };
 
-//座標情報を格納
+
+//座標情報に変換
 function Coordinate(p){
   this.col = p % Q.cols; //行
   this.row = Math.floor(p / Q.rows); //列
@@ -28,12 +30,13 @@ function Coordinate_toString() {
   return "Coordinate(" + this.col + ", " + this.row + ", " + this.blk + ")";
 }
 
+//クラスとして定義
 new Coordinate(0);
 Coordinate.prototype.toString = Coordinate_toString;
 
 //数独情報をオブジェクトへ
 function Sudoku() {
-  this.board = new Array(Q.area);
+  this.board = new Array(Q.area); //一元配列に全てのセル情報を格納
   this.col_flags = new Array(Q.cols);
   this.row_flags = new Array(Q.rows);
   this.blk_flags = new Array(Q.blks);
@@ -41,22 +44,21 @@ function Sudoku() {
   for (let i = 0; i < Q.rows; i++) this.row_flags[i] = 0x3fe;
   for (let i = 0; i < Q.blks; i++)  this.blk_flags[i] = 0x3fe;
   for (let i = 0; i < Q.area; i++) this.board[i] = 0;
-  this.remain = Q.area;
+  this.remain = Q.area; //未配置のセル数
 }
+
 function Sudoku_done() {
   return this.remain == 0;
 }
-function copyArray(dest, sou) {
-  for (var i = sou.length - 1; i >= 0; i--)
-  dest[i] = sou[i];
-}
+//変更情報を反映
 function Sudoku_copy(source) {
-  copyArray(this.board,     source.board);
-  copyArray(this.col_flags, source.col_flags);
-  copyArray(this.row_flags, source.row_flags);
-  copyArray(this.blk_flags, source.blk_flags);
+  this.board = source.board.concat();
+  this.col_flags = source.col_flags.concat();
+  this.row_flags = source.row_flags.concat();
+  this.blk_flags = source.blk_flags.concat();
   this.remain = source.remain;
 }
+
 function Sudoku_setData(s) {
   var p = 0;
   for (var i = 0; i < s.length && p < Q.area; i++) {
@@ -72,6 +74,8 @@ function Sudoku_setData(s) {
     this.board[p] = 0;
   }
 }
+
+//問題ファイルから数値情報を取得
 function Sudoku_getData() {
   var b = Q.board;
   var a = [];
@@ -85,6 +89,8 @@ function Sudoku_getData() {
     }
   }
 }
+
+//数独クラスの情報から表を作成し表示
 function Sudoku_view(p) {
   var opt = {};
   var tmp_array = new Array(Q.cols);
@@ -102,6 +108,7 @@ function Sudoku_view(p) {
   setTable(tmp_array, opt);
 }
 
+//検索した値を設置
 function Sudoku_setNum(p, n, f) {
   var coord = new Coordinate(p);
   var mask = ~(1 << n);
@@ -112,19 +119,24 @@ function Sudoku_setNum(p, n, f) {
   if (opt.changeView && f != false) this.view(p);
   this.remain--;
 }
+
+//該当座標のフラグ情報を取得
 function Sudoku_getFlags(p) {
   var coord = new Coordinate(p);
   var flag = 	this.col_flags[coord.col] & this.row_flags[coord.row]
   & this.blk_flags[coord.blk];
   return flag;
 }
+
+//該当座標のフラグ情報から該当数値を格納できるか判断
 function Sudoku_canPlace(p, n) {
-  if (this.board[p] != 0)
-  return 0;
+  if (this.board[p] != 0) return 0;
   var coord = new Coordinate(p);
   return this.col_flags[coord.col] & this.row_flags[coord.row]
   & this.blk_flags[coord.blk] & (1 << n);
 }
+
+//該当座標のフラグを取得し、ビット情報として返す。
 function Sudoku_countAvail(p) {
   var flag = this.getFlags(p);
   return countBits(flag);
@@ -154,7 +166,8 @@ function Sudoku_load(area) {
   this.copy(area);
 }
 
-new Sudoku();	// dummy
+//数独クラスを定義
+new Sudoku();
 Sudoku.prototype.getData = Sudoku_getData;
 Sudoku.prototype.setData = Sudoku_setData;
 Sudoku.prototype.view = Sudoku_view;
@@ -169,11 +182,7 @@ Sudoku.prototype.load = Sudoku_load;
 Sudoku.prototype.done = Sudoku_done;
 
 
-function dumpx(objName, obj) {
-  for (var prop in obj) {
-    document.writeln(objName + "." + prop + " = " + obj[prop] + "<BR>");
-  }
-}
+//フラグ情報を元に、格納し得る値を返す。
 function getFirstNum(flag) {
   var n = 0;
   if (flag == 0)
@@ -184,6 +193,8 @@ function getFirstNum(flag) {
   }
   return n;
 }
+
+//フラグ情報をもとに配置を行う
 function methodA(sudoku) {
   for (var p = 0; p < Q.area; p++) {
     if (sudoku.board[p] == 0) {
@@ -197,12 +208,14 @@ function methodA(sudoku) {
   }
   return false;
 }
+//配列の値を0に
 function makeZeroArray(n) {
   var a = new Array(n);
   for (var i = 0; i < n; i++)
   a[i] = 0;
   return a;
 }
+//
 function methodB(sudoku) {
   var prow = new Array(Q.rows);
   var pcol = new Array(Q.cols);
@@ -243,6 +256,7 @@ function methodB(sudoku) {
   return false;
 }
 
+//取得数の２進数内に含まれる１の数を返す。
 function countBits(f) {
   var n = 0;
   while (f) {
@@ -252,7 +266,7 @@ function countBits(f) {
   }
   return n;
 }
-
+//一つ前のデータへ戻す
 function backtrack(sudoku) {
   var backupSpace = sudoku.save();
   var p = sudoku.nextAvail();
@@ -264,6 +278,7 @@ function backtrack(sudoku) {
     }
   }
 }
+//各関数を用いた実行関数
 function tryIt(sudoku) {
   var cont;
   do {
@@ -278,19 +293,15 @@ function tryIt(sudoku) {
   else
   backtrack(sudoku);
 }
-function setInitData(str) {
-  sudoku = new Sudoku();
-  sudoku.setData(str);
-  sudoku.view();
-  return sudoku;
-}
 
-
-function solve(){
+//解答を全て出力する。
+function solve(o){
   if (!opt.isLoaded) {
     alert('問題ファイルを読み込んでください.');
     return;
   }
+
+  if (o && o.view) opt.changeView = true;　//変更推移を残す
 
   var d1 = (new Date).getTime();
   sudoku = new Sudoku();
@@ -301,35 +312,15 @@ function solve(){
   var d4 = (new Date).getTime();
   alert("init = " + (d2 - d1) + "\nload = "
   + (d3 - d2) + "\nsolve = " + (d4 - d3) + " [ms]");
+
+  opt.changeView = false;　//どちらにしろ設定を元に戻す
 }
-
-function next(){
-  if (!opt.isLoaded) {
-    alert('問題ファイルを読み込んでください.');
-    return;
-  }
-
-  opt.changeView = true;　//変更推移を残す
-  var d1 = (new Date).getTime();
-  sudoku = new Sudoku();
-  var d2 = (new Date).getTime();
-  sudoku.getData();
-  var d3 = (new Date).getTime();
-  tryIt(sudoku);
-  var d4 = (new Date).getTime();
-  alert("init = " + (d2 - d1) + "\nload = "
-  + (d3 - d2) + "\nsolve = " + (d4 - d3) + " [ms]");
-  opt.changeView = false;　//設定を元に戻す
-}
-
 
 //配列情報からテーブル表示
 function setTable(array, option) {
   var col = array.length;
   var row = array[0].length;
   if (!opt.changeView) $("#tableCel").empty();
-
-  if (option) console.log(option);
 
   var tableJQ = $('<table id="table_id1" class="table table-bordered" style="width:auto;"></table>');
   if (option && option.view == 'change') tableJQ.addClass('changing');
@@ -350,11 +341,11 @@ function loadFile(){
   var input = $("#questionFile"),
   file = input.get(0).files[0];
 
-  xmlHttp = new XMLHttpRequest();
-  xmlHttp.open("GET", file.path, false);
-  xmlHttp.send(null);
-
-  initLoadFile(xmlHttp.responseText);
+  var reader = new FileReader();
+  reader.readAsText(file);
+  reader.addEventListener('load', function() {
+    initLoadFile(reader.result);
+  });
 }
 
 //取得したファイルを変数へ格納
